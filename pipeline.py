@@ -10,8 +10,8 @@ import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 from typing import List, Tuple
 
-#print("Loading the embedder")
-#embedder = SentenceTransformer('all-MiniLM-L6-v2')
+print("Loading the embedder")
+embedder = SentenceTransformer('all-MiniLM-L6-v2')
 
 def convert_work_to_node(work):
 

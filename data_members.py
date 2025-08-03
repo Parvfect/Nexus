@@ -1,6 +1,7 @@
 
 from typing import Any, List, Tuple
 import matplotlib.pyplot as plt
+from dataclasses import dataclass, asdict
 
 
 class Author:
@@ -24,7 +25,6 @@ class Location:
 class Node:
     id: str
     title: str
-    relevance: float
     primary_topic: str
     topics: str
     keywords: list[str]
@@ -70,3 +70,38 @@ class Graph:
         plt.axis('equal')
         plt.grid(True)
         plt.show()
+
+    
+    def get_json(self):
+        def node_to_dict(node):
+            return {
+                "id": node.id,
+                "title": node.title,
+                "year": node.publication_year,
+                "keywords": node.keywords,
+                "topic": node.primary_topic if hasattr(
+                    node, "primary_topic") else "",
+                "related_topics": node.topics[1:] if hasattr(
+                    node, "topics"
+                ) else "",
+                "field": node.field if hasattr(
+                    node, "field"
+                ) else "",
+                "subfield": node.subfield if hasattr(
+                    node, "subfield"
+                ) else "",
+                "domain": node.domain if hasattr(
+                    node, "domain"
+                ) else "",
+                "relevance": node.relevance if hasattr(
+                    node, "relevance"
+                ) else "",
+                "doi": node.doi,
+                "citations": node.total_citations
+            }
+
+        return {
+            "search_query": self.search_query,
+            "primary_node_id": self.primary_node.title,
+            "nodes": [node_to_dict(node) for node in self.nodes]
+        }

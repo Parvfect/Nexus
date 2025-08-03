@@ -1,5 +1,6 @@
 import requests
-import fitz  # PyMuPDF
+from data_members import Node, Graph
+from text_extraction import extract_pdf_text_from_url
 
 
 def bulk_retrieve_works(ids: list[str], extract_from_url: bool = True):
@@ -45,21 +46,47 @@ def search_by_title(title_query: str, n_results: int = 50):
 
     data = response.json()
     return data["results"]
+    
 
-
-def extract_pdf_text_from_url(url, save_as="temp.pdf"):
+def convert_work_to_node(
+        work, validate_fulltext: bool = True, supress_errors: bool = False):
     """
-    Extract fulltext from pdf url"""
+    Given an OpenAlex work object - converts to a Graph Node from data_members.py
+    """
 
-    response = requests.get(url)
-    with open(save_as, "wb") as f:
-        f.write(response.content)
+    node = Node()
+    
+    try:
+        node.id = work['id'].rstrip('/').split('/')[-1]
+        node.title = work['title']
+        node.primary_topic = work['primary_topic']['display_name']
+        node.subfield = work['primary_topic']['subfield']["display_name"]
+        node.field = work['primary_topic']['field']["display_name"]
+        node.domain = work['primary_topic']['domain']["display_name"]
+        #subfields = [i['display_name'] for i in work['primary_topic']['subfield']]
+        node.topics = [i['display_name'] for  i in  work['topics']]
+        node.keywords = [i['display_name'] for i in work['keywords']]
+        node.total_citations = work['cited_by_count']
+        node.publication_year = work['publication_year']
+        node.doi = work['doi']
+        node.authors = work['authorships']
+        node.cites_by_id = [url.rstrip('/').split('/')[-1] for url in work['referenced_works']]
 
-    doc = fitz.open(save_as)
-    full_text = []
-    for page in doc:
-        full_text.append(page.get_text())
-    doc.close()
+        if validate_fulltext:
+            if work['has_fulltext']:
+                oa_url = work['open_access']['oa_url']
 
-    return "\n\n".join(full_text)
+                fulltext = extract_pdf_text_from_url(oa_url)
+                if fulltext:
+                    node.has_fulltext = True
+                    node.fulltext = fulltext
+                else:
+                    node.has_fulltext = False
+            else:
+                node.has_fulltext = False
+            
+    except Exception as e:
+        if not supress_errors:
+            print(f"Exception {e}")
 
+    return node

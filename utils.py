@@ -90,3 +90,10 @@ def convert_work_to_node(
             print(f"Exception {e}")
 
     return node
+
+
+def read_api_key():
+    with open('semantic_scholar_api_key.txt', 'r') as f:
+        key = f.readlines()
+
+    return key[0]

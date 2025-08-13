@@ -2,6 +2,7 @@
 import requests
 from utils import read_api_key
 from text_extraction import extract_pdf_text_from_url
+from data_members import SemanticNode, Graph
 import logging
 import regex as re
 
@@ -80,10 +81,12 @@ def get_paper_pdf_urls(paper_objects):
                 url = re.findall(pattern, disclaimer)[0]
                 if 'email' in url:
                     url = ''
+                if '/abs/' in url:  # Replacing arxiv abs pages to pdf
+                    url = url.replace('/abs/', '/pdf/')
         except Exception as e:
             logging.error('Error in extracting pdf url for %s', i)
             failure_counter += 1
-            continue
+            url = ''
 
         pdf_urls.append(url)
 
@@ -92,7 +95,7 @@ def get_paper_pdf_urls(paper_objects):
     return pdf_urls
 
 
-def create_connected_graph(work):
+def create_connected_graph(work, relevance_search=False):
     # Given primary work - main node information, get the bulk references, extract pdf for all and create the connected graph
 
     reference_ids = [i['paperId'] for i in work['references']]
@@ -101,9 +104,17 @@ def create_connected_graph(work):
 
     paper_objects = [work] + reference_papers
 
+    paper_urls = get_paper_pdf_urls(reference_papers)
+
+
+    papers = [i for i in papers if i]
+
+    nodes = [SemanticNode(i) for i in papers]
+
     pdf_urls = get_paper_pdf_urls(paper_objects=paper_objects)
 
-    fulltexts = [extract_pdf_text_from_url(i) for i in pdf_urls]
+    if relevance_search:
+        fulltexts = [extract_pdf_text_from_url(i) for i in pdf_urls]
 
     # And then create the connected graph
 

@@ -2,6 +2,7 @@
 from typing import Any, List, Tuple
 import matplotlib.pyplot as plt
 from dataclasses import dataclass, asdict
+from paper_similarity import get_paper_similarity
 
 
 class Author:
@@ -40,6 +41,16 @@ class Node:
     has_fulltext: bool
     primary_location: str
 
+class SemanticNode(Node):
+
+    def __init__(self, paper_object: dict):
+
+        if paper_object is not None:
+            for key, value in paper_object.items():
+                setattr(self, key, value)
+        else:
+            self.title = "empty"
+
 
 class Graph:
 
@@ -50,7 +61,25 @@ class Graph:
         self.search_query = search_query
 
     def weigh_nodes(self):
-        # Distribute nodes based on topics
+
+        print("Doing relevance weighting")
+        for i, node in enumerate(self.nodes[1:]):
+
+            progress_bar = i+1 / (len(self.nodes) - 1) * 100
+            print(f"{progress_bar} % completed\n")
+
+            try:
+                if hasattr(node, "fulltext"):
+                    relevance, k1, k2 = get_paper_similarity(
+                        self.primary_node.fulltext, node.fulltext)
+            except Exception as e:
+                print("Exception {e}")
+                node.relevance = 0.2
+                continue 
+
+            node.relevance = float(relevance)
+            if k2:
+                node.keywords = k2
         return
 
     def visualise_static(self):
@@ -74,6 +103,8 @@ class Graph:
     
     def get_json(self):
         def node_to_dict(node):
+
+            """
             return {
                 "id": node.id,
                 "title": node.title,
@@ -99,6 +130,8 @@ class Graph:
                 "doi": node.doi,
                 "citations": node.total_citations
             }
+            """
+            return node.__dict__
 
         return {
             "search_query": self.search_query,

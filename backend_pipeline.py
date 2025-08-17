@@ -4,13 +4,12 @@ from data_members import Node, Graph
 from typing import List, Tuple
 from paper_similarity import get_paper_similarity
 import json
-from backend_functions import search_for_papers, get_connected_graph
+from semantic_scholar_functions import search_for_papers, get_connected_graph
 
 search_input = input("Enter your search term:  ")
 print()
 
-works = search_for_papers(search_term=search_input)  # Make search query to OpenAlex API
-
+works = search_for_papers(search_term=search_input)
 
 print("Select paper:")  # Send recommendations for paper selection
 for counter, i in enumerate(works):
@@ -24,7 +23,7 @@ if paper_number == -1:   # Take valid paper number input
 paper = works[int(paper_number)]
 
 connected_graph = get_connected_graph(
-    paper, write_to_file=True, first_3=True)
+    paper, search_query=search_input, relevance_search=False)
 
 """
 primary_node = convert_work_to_node(paper)

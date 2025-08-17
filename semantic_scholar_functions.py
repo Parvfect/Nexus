@@ -10,7 +10,7 @@ import regex as re
 S2_API_KEY = read_api_key()
 
 
-def search_for_paper(paper_title, limit=20):
+def search_for_papers(paper_title, limit=20):
     rsp = requests.get(
         'https://api.semanticscholar.org/graph/v1/paper/search',
         headers={'X-API-KEY': S2_API_KEY},
@@ -19,7 +19,17 @@ def search_for_paper(paper_title, limit=20):
 
     if rsp.status_code == 200:
         logging.info("Search for paper %s successful", paper_title)
-        return rsp.json()
+        rsp_json = rsp.json()
+
+        while True:  # Dangerous while true loop - keep going till ss returns a good response
+            try:
+                papers_bulk_search = bulk_retrieve_papers(
+                   [i['paperId'] for i in rsp_json['data']])  # Returning only the papers that have references
+                if papers_bulk_search is not None:
+                    break
+            except Exception as e:
+                continue
+        return [i for i in papers_bulk_search if i['references'] is not None]
     else:
         logging.error(
             "Search for paper returned status %s for query %s",
@@ -95,7 +105,7 @@ def get_paper_pdf_urls(paper_objects):
     return pdf_urls
 
 
-def create_connected_graph(work, relevance_search=False):
+def get_connected_graph(work, search_query="", relevance_search=False):
     # Given primary work - main node information, get the bulk references, extract pdf for all and create the connected graph
 
     reference_ids = [i['paperId'] for i in work['references']]
@@ -106,16 +116,23 @@ def create_connected_graph(work, relevance_search=False):
 
     paper_urls = get_paper_pdf_urls(reference_papers)
 
+    paper_objects = [i for i in paper_objects if i]
 
-    papers = [i for i in papers if i]
+    nodes = [SemanticNode(i) for i in paper_objects]
 
-    nodes = [SemanticNode(i) for i in papers]
-
-    pdf_urls = get_paper_pdf_urls(paper_objects=paper_objects)
+    graph = Graph(
+        nodes=nodes, primary_node=nodes[0], search_query=search_query)
 
     if relevance_search:
+        pdf_urls = get_paper_pdf_urls(paper_objects=paper_objects)
         fulltexts = [extract_pdf_text_from_url(i) for i in pdf_urls]
+        for i, j in zip(fulltexts, graph.nodes):
+            if i:
+                j.fullltext = i
+                j.has_fulltext = True
 
-    # And then create the connected graph
+        graph.weigh_nodes()
+    else:
+        graph.randomly_weigh_nodes()
 
-    return
+    return graph.get_json()

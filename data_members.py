@@ -3,7 +3,8 @@ from typing import Any, List, Tuple
 import matplotlib.pyplot as plt
 from dataclasses import dataclass, asdict
 from paper_similarity import get_paper_similarity
-
+import random
+import math
 
 class Author:
     name: str
@@ -42,6 +43,7 @@ class Node:
     primary_location: str
 
 class SemanticNode(Node):
+    relevance: float
 
     def __init__(self, paper_object: dict):
 
@@ -74,17 +76,21 @@ class Graph:
                         self.primary_node.fulltext, node.fulltext)
             except Exception as e:
                 print("Exception {e}")
-                node.relevance = 0.2
-                continue 
+                relevance = 0.2
+                k2 = None
 
             node.relevance = float(relevance)
             if k2:
                 node.keywords = k2
         return
+    
+    def randomly_weigh_nodes(self):
+        for node in self.nodes[1:]:
+            node.relevance = random.random()
+        return
 
     def visualise_static(self):
-        positions = {
-            node: position for node, position in zip(self.nodes, self.positions)}
+        positions = []
         edges = [[(node.id, k.id) for k in node.cites_by_ids] for node in self.nodes]
 
         for node, (x, y) in positions.items():
